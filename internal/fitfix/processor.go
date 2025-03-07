@@ -47,6 +47,11 @@ func Process(src io.Reader, target io.Writer, opts Options) error {
 		elapsed := session.TotalElapsedTime
 		timerTime := session.TotalTimerTime
 		activity.Laps = []*mesgdef.Lap{createLap(startTime, endTime, elapsed, timerTime)}
+		session.SetNumLaps(1)
+		if len(activity.Sessions) > 1 {
+			activity.Sessions = activity.Sessions[:1]
+			activity.Activity.SetNumSessions(1)
+		}
 	}
 
 	return encode(activity, target)
@@ -59,7 +64,6 @@ func decode(r io.Reader) (*filedef.Activity, error) {
 		slog.Error("Decoding failed:", KeyError, err)
 		return nil, err
 	}
-
 	return filedef.NewActivity(decoded.Messages...), nil
 }
 
@@ -80,14 +84,10 @@ func fixActivity(a *filedef.Activity, startTime, endTime time.Time) {
 	localTimestamp := endTime.Add(offset)
 	a.Activity.SetLocalTimestamp(localTimestamp)
 	a.FieldDescriptions = nil
-	if len(a.Sessions) > 1 {
-		a.Sessions = a.Sessions[:1]
-	}
 }
 
 func fixSession(s *mesgdef.Session, startTime, endTime time.Time) {
 	s.SetDeveloperFields()
-	s.SetNumLaps(1)
 	s.SetMessageIndex(0)
 	s.SetStartTime(startTime)
 	s.SetTimestamp(endTime)

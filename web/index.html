@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MyWhoosh FIT File Fix</title>
+    <script src="wasm_exec.js"></script>
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css"/>
+    <style>
+        .dz-progress {
+            display: none !important;
+        }
+    </style>
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+</head>
+<body>
+<div style="width: 100%; text-align: center">
+    <h1>MyWhoosh FIT File Fix</h1>
+    <p>
+        <b>100% client side processing</b> ✅<br>
+        All processing takes place in your browser. No data is sent to a server.
+    </p>
+    <form action="#" class="dropzone" id="dropzone-form"
+          style="max-width: 600px;display: block;margin-left: auto;margin-right: auto;">
+        <div class="dz-message" data-dz-message>
+            <span>Drag and drop MyWhoosh FIT File here. Or click to browse...</span>
+            <p>🚴</p>
+        </div>
+    </form>
+    <div style="max-width: 600px;display: block;margin-left: auto;margin-right: auto; text-align: left;margin-top: 10px;">
+        <input type="checkbox" id="optionDevice" checked>
+        <label for="optionDevice">Change recording device from Garmin Edge 1030 Plus to MyWhoosh</label><br>
+        <input type="checkbox" id="optionLaps" checked>
+        <label for="optionLaps">Fix laps in FIT file (use single lap for whole activity)</label><br>
+        <button id="submitButton" style="margin-top: 10px;" onclick="submitClicked()" disabled="disabled">
+            Download Fixed FIT File
+        </button>
+        <p style="margin-top: 30px;">
+            <b>This site is not affiliated with or endorsed by MyWhoosh in any way.</b>
+            Official MyWhoosh website can be found at
+            <a href="https://www.mywhoosh.com/" target="_blank">https://www.mywhoosh.com/</a>.
+        </p>
+        <div style="margin-top: 20px;">
+            <a class="github-button" href="https://github.com/rosvit/mw-fitfix" data-size="large"
+               aria-label="View rosvit/mw-fitfix on GitHub" target="_blank">View on GitHub</a>
+        </div>
+    </div>
+    <script>
+        class FitFile {
+            constructor(fileName, buffer) {
+                this.fileName = fileName;
+                this.buffer = buffer;
+            }
+
+            isPresent() {
+                return this.fileName && this.buffer;
+            }
+        }
+
+        let fitFile = new FitFile();
+        Dropzone.options.dropzoneForm = {
+            acceptedFiles: ".fit",
+            maxFilesize: 1000000,
+            maxFiles: 1,
+            addRemoveLinks: true,
+            clickable: true,
+            autoProcessQueue: false,
+            parallelUploads: 1,
+            init: function () {
+                this.on("maxfilesexceeded", function (file) {
+                    alert("Can't process more than one FIT file!");
+                    this.removeAllFiles();
+                    this.addFile(file);
+                });
+                this.on("addedfile", async function (file) {
+                    fitFile = new FitFile(file.name, new Uint8Array(await file.arrayBuffer()));
+                    document.getElementById("submitButton").disabled = false;
+                });
+                this.on("removedfile", function () {
+                    document.getElementById("submitButton").disabled = true;
+                    fitFile = new FitFile();
+                });
+            }
+        };
+
+        function submitClicked() {
+            if (fitFile.isPresent()) {
+                const optDevice = document.getElementById("optionDevice").checked;
+                const optLaps = document.getElementById("optionLaps").checked;
+                const opts = JSON.stringify({
+                    device: optDevice,
+                    laps: optLaps,
+                });
+                const result = fixFit(fitFile.buffer, opts);
+                const fixedName = fitFile.fileName.substring(0, fitFile.fileName.lastIndexOf('.')) + "_fixed.fit";
+                downloadBlob(result, fixedName);
+            }
+        }
+
+        const downloadBlob = (data, fileName) => {
+            const blob = new Blob([data], {
+                type: "application/octet-stream"
+            });
+            const url = window.URL.createObjectURL(blob);
+            downloadURL(url, fileName);
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        }
+
+        const downloadURL = (data, fileName) => {
+            const a = document.createElement("a");
+            a.href = data;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.style.display = "none";
+            a.click();
+            a.remove();
+        }
+
+        const go = new Go();
+        WebAssembly.instantiateStreaming(fetch("./main.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+        });
+    </script>
+</div>
+</body>
+</html>

@@ -14,12 +14,11 @@ import (
 const extension = ".fit"
 
 func main() {
+	var target string
+	flag.StringVar(&target, "target", "", "target FIT file")
+	replace := flag.Bool("replace", false, "replace original FIT file with fixed one")
 	laps := flag.Bool("laps", true, "update laps to single lap for whole activity")
 	device := flag.Bool("device", true, "remove default Garmin Edge device")
-	replace := false
-	target := ""
-	flag.BoolVar(&replace, "replace", false, "replace original FIT file with fixed one")
-	flag.StringVar(&target, "target", "", "target FIT file")
 	flag.Parse()
 	args := flag.Args()
 
@@ -29,7 +28,7 @@ func main() {
 	src := args[0]
 
 	if target == "" {
-		if replace {
+		if *replace {
 			target = src
 		} else if orig, found := strings.CutSuffix(src, extension); found {
 			target = fmt.Sprintf("%s_fixed%s", orig, extension)
